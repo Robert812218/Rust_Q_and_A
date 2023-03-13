@@ -1,44 +1,56 @@
+#[derive(Debug)]
 struct Question {
     id: QuestionId,
     title: String,
     content: String,
     tags: Option<Vec<String>>,
 }
-struct QuestionId(String),
+
+struct QuestionId(String);
 
 impl Question {
     fn new(
         id: QuestionId,
         title: String,
         content: String,
-        tags: Option<Vec<String>>
-        ) -> Self {
-            Question {
-                id,
-                title,
-                content,
-                tags,
-            }
+        tags: Option<Vec<String>>,
+    ) -> Self {
+        id,
+        title,
+        content,
+        tags,
+    }
+
+    fn fmt(&self, f:&mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        write!(
+            f,
+            "{}, title: {}, content: {}, tags: {:?",
+            self.id, self.title, self.content, self.tags
+        )
     }
 }
 
+impl std::fmt::Display for Question {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "id: {:?}", self.tags)
+    }
+}
+
+assert_eq!("(1.987, 2.983)",
+    format!(
+        "{}",
+        Position {
+            longitude: 1.987, latitude: 2.983,
+        }
+    )
+);
+
 fn main() {
-    struct Book {
-        title: String,
-        isbn: Option<String>,
-    }
-
-    let book = Book {
-        title: "Great book".to_string(),
-        isbn: Some(String::from("1-123-456"))
-    };
-
-    match book.isbn {
-        Some(i) => println!(
-                "The ISBN of the book: {} is: {}",
-                book.title,
-                i
-            ),
-            None => println!("We don't know the ISBN of this book.");
-    }
+    let question = Question::new(
+        QuestionId("1".to_string()),
+        "First Question".to_string(),
+        "Content of question".to_string(),
+        Some(vec!("faq".to_string())),
+    );
+    println!("{:?}", question);
 }
