@@ -1,3 +1,6 @@
+use std::io::{Error, ErrorKind};
+use std::str::FromStr;
+
 #[derive(Debug)]
 struct Question {
     id: QuestionId,
@@ -6,6 +9,7 @@ struct Question {
     tags: Option<Vec<String>>,
 }
 
+#[derive(Debug)]
 struct QuestionId(String);
 
 impl Question {
@@ -45,12 +49,24 @@ assert_eq!("(1.987, 2.983)",
     )
 );
 
+impl FromStr for QuestionId {
+    type Err = std::io::Error;
+
+    fn from_str(id: &str) -> Result<Self, Self::Err> {
+        match id.is_empty() {
+            false => Ok(QuestionId(id.to_string())),
+            true => Err(
+                Error::new(ErrorKind::InvalidInput, "No id provided")
+            ),
+        }
+    }
+}
+
 fn main() {
-    let question = Question::new(
-        QuestionId("1".to_string()),
-        "First Question".to_string(),
-        "Content of question".to_string(),
-        Some(vec!("faq".to_string())),
-    );
-    println!("{:?}", question);
+    let hello = warp::get()
+        .map(|| format!("Hello, World!"));
+
+    warp::serve(hello)
+        .run(([127, 0, 0, 1], 3030))
+        .await;
 }
