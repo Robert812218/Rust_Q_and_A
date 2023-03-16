@@ -40,14 +40,24 @@ struct Question {
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 struct QuestionId(String);
 
-async fn get_questions(
-        params: HashMap<String, String>,
-        store: Store
-    ) -> Result<impl warp::Reply, warp::Rejection> {
-    let res: Vec<Question> = store.questions.values().cloned().collect();
-
-    Ok(warp::reply::json(&res))
+#[derive(Debug)]
+enum Error {
+    ParseError(std::num::ParseIntError),
+    MissingParameters,
 }
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match *self {
+            Error::ParseError(ref err) -> {
+                write!(f, "Cannot parse parameter: {}", err)
+            },
+            Error::MissingParameters => write!(fm "Missing Parameter"),
+        }
+    }
+}
+
+impl Reject for Error {}
 
 async fn return_error(r: Rejection) -> Result<impl Reply, Rejection> {
     if let Some(error) = r.find::<CorsForbidden>() {
@@ -61,6 +71,26 @@ async fn return_error(r: Rejection) -> Result<impl Reply, Rejection> {
             StatusCode::NOT_FOUND,
         ))
     }
+}
+
+async fn get_questions(
+        params: HashMap<String, String>,
+        store: Store
+    ) -> Result<impl warp::Reply, warp::Rejection> {
+
+    match params.get("start") {
+        Some(start) => println!("{}", start),
+        None => println!("No start value"),
+    }
+
+    if let Some(n) = params.get("start") {
+        println!("{:?}", n.parse<usize>());
+    }
+
+    println!("{:?}", params);
+    let res: Vec<Question> = store.questions.values().cloned().collect();
+
+    Ok(warp::reply::json(&res))
 }
 
 #[derive(Clone)]
