@@ -12,15 +12,18 @@ use warp::{
 };
 
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
+#[derive(Clone)]
 struct Store {
-    questions: HashMap<QuestionId, Question>,
+    questions: Arc<RwLock<HashMap<QuestionId, Question>>>,
 }
 
 impl Store {
     fn new() -> Self {
         Store {
-            questions: Self::init(),
+            questions: Arc::new(RwLock::new(Self::init())),
         }
     }
     fn init() -> HashMap<QuestionId, Question> {
@@ -108,14 +111,19 @@ async fn get_questions(
         params: HashMap<String, String>,
         store: Store
     ) -> Result<impl warp::Reply, warp::Rejection> {
-    
     if !params.is_empty() {
         let pagination = extract_pagination(params)?;
-        let res: Vec<Question> = store.questions.values().cloned().collect();
+        let res: Vec<Question> = store
+            .questions
+            .read()
+            .await
+            .values()
+            .cloned()
+            .collect();
         let res = &res[pagination.start..pagination.end];
         Ok(warp::reply::json(&res))
     } else {
-        let res: Vec<Question> = store.questions.values().cloned().collect();
+        let res: Vec<Question> = store.questions.read().await.values().cloned().collect();
         Ok(warp::reply::json(&res))
     }
 
@@ -132,6 +140,17 @@ async fn get_questions(
     let res: Vec<Question> = store.questions.values().cloned().collect();
 
     Ok(warp::reply::json(&res))
+}
+
+async fn add_questions(
+        params: HashMap<String, String>,
+        store: Store,
+    ) -> Result<impl warp::Reply, warp::Rejection> {
+        if !params.is_empty() {
+            let pagination = extract_pagination(params)?;
+            let res: Vec<Question> = store.questiosn.read().await.values().cloned().collect();
+
+        }
 }
 
 #[derive(Clone)]
