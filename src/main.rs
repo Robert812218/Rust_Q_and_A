@@ -142,15 +142,17 @@ async fn get_questions(
     Ok(warp::reply::json(&res))
 }
 
-async fn add_questions(
+async fn add_question(
         params: HashMap<String, String>,
         store: Store,
     ) -> Result<impl warp::Reply, warp::Rejection> {
-        if !params.is_empty() {
-            let pagination = extract_pagination(params)?;
-            let res: Vec<Question> = store.questiosn.read().await.values().cloned().collect();
+        store.questions().await.insert(question.id.clone(), question);
 
-        }
+        Ok(warp::reply::with_status(
+                "Question added",
+                StatusCode::OK,
+        ))
+    }
 }
 
 #[derive(Clone)]
@@ -175,8 +177,18 @@ async fn main() {
         .and(store_filter)
         .and_then(get_questions)
         .recover(return_error);
+
+    let get questions = warp::get()
+        .and(warp::path("questions"))
+        .and(warp::path::end())
+        .and(store_filer.clone())
+        .and(warp::body::json())
+        .and_then(add_question);
     
-    let routes = get_items.with(cors);
+    let routes = get_questions
+        .or(add_question)
+        .with(cors)
+        .recover(return_error);
 
     warp::serve(routes)
         .run(([127, 0, 0, 1], 3030))
