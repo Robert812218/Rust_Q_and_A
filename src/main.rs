@@ -73,6 +73,7 @@ struct extract_pagination(
 enum Error {
     ParseError(std::num::ParseIntError),
     MissingParameters,
+    QuestionNotFound,
 }
 
 impl std::fmt::Display for Error {
@@ -84,6 +85,21 @@ impl std::fmt::Display for Error {
             Error::MissingParameters => write!(fm "Missing Parameter"),
         }
     }
+}
+async fn update_question(
+    id: String,
+    store: Store,
+    question: Question
+) -> Result<impl warp::Reply, warp::Rejection> {
+    match store.questions.write().await.get_mut(&Question(id)) {
+        Some(q) => *q = question,
+        None => return Err(warp::reject::custom(Error::QuestionNotFound)),
+    }
+
+    Ok(warp::reply::with_status(
+            "Question updated",
+            StatusCode::OK,
+    ))
 }
 
 impl Reject for Error {}
@@ -178,12 +194,27 @@ async fn main() {
         .and_then(get_questions)
         .recover(return_error);
 
-    let get questions = warp::get()
+    let get_questions = warp::get()
         .and(warp::path("questions"))
         .and(warp::path::end())
         .and(store_filer.clone())
         .and(warp::body::json())
         .and_then(add_question);
+
+    let add_question = warp::post()
+        .and(warp::path("questions"))
+        .and(warp::path::end())
+        .and(store_filter.clone())
+        .and(warp::body::json())
+        .and_then(add_question);
+
+    let update_question = warp::put()
+        .and(warp::path("questions")
+        .and(warp::path::param::<String>())
+        .and(warp::path::end())
+        .and(store_filter.clone())
+        .and(warp::body::json())
+        .and_then(update_question);
     
     let routes = get_questions
         .or(add_question)
