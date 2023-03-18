@@ -3,7 +3,8 @@ use warp::{
     Filter, 
     http::Method, 
     filters::{
-        cors::CorsForbidden,
+        body::BodyDeserializeError,
+        cors::CorsForbidden
     }, 
     reject::Reject, 
     Rejection, 
@@ -115,6 +116,8 @@ async fn return_error(r: Rejection) -> Result<impl Reply, Rejection> {
             error.to_string(),
             StatusCode::FORBIDDEN,
         ))
+    } else if let Some(error) = r.find::<Body.DeserializeError>() {
+            
     }  else {
         Ok(warp::reply::with_status(
             "Route not found".to_string(),
@@ -218,6 +221,7 @@ async fn main() {
     
     let routes = get_questions
         .or(add_question)
+        .or(update_question)
         .with(cors)
         .recover(return_error);
 
