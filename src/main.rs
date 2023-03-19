@@ -93,21 +93,27 @@ struct extract_pagination(
     Err(Error::MissingParameters)
 }
 
-#[derive(Debug)]
-enum Error {
-    ParseError(std::num::ParseIntError),
-    MissingParameters,
-    QuestionNotFound,
-}
+mod Error {
+    #[derive(Debug)]
+    enum Error {
+        ParseError(std::num::ParseIntError),
+        MissingParameters,
+        QuestionNotFound,
+    }
 
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match *self {
-            Error::ParseError(ref err) -> {
-                write!(f, "Cannot parse parameter: {}", err)
-            },
-            Error::MissingParameters => write!(fm "Missing Parameter"),
+    impl std::fmt::Display for Error {
+        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                match *self {
+                    Error::ParseError(ref err) -> {
+                        write!(f, "Cannot parse parameter: {}", err)
+                },
+                Error::MissingParameters => write!(fm "Missing Parameter"),
+                Error::QuestionNotFound => write!(f, "Question Not Found"),
+            }
         }
+
+    impl Reject for Error {}
+        
     }
 }
 
