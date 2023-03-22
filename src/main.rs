@@ -6,7 +6,6 @@ use warp::{
         body::BodyDeserializeError,
         cors::CorsForbidden
     }, 
-    reject::Reject, 
     Rejection, 
     Reply, 
     http::StatusCode
@@ -74,7 +73,7 @@ struct Pagination {
 
 struct extract_pagination(
         params: HashMap<String, String>
-    ) -> Result<Pagination, Error> {
+    ) -> Result<Pagination, error:Error> {
     if params.contains_key("start") && params.contains_key("end") {
         return Ok(Pagination {
             start: params
@@ -93,9 +92,20 @@ struct extract_pagination(
     Err(Error::MissingParameters)
 }
 
-mod Error {
+mod error {
+    use warp::{
+        filters::{
+            body::BodyDeserializeError,
+            cors::CorsForbidden,
+        },
+        reject::Reject,
+        Rejection,
+        Reply,
+        http::StatusCode,
+    };
+
     #[derive(Debug)]
-    enum Error {
+    pub enum Error {
         ParseError(std::num::ParseIntError),
         MissingParameters,
         QuestionNotFound,
@@ -111,9 +121,32 @@ mod Error {
                 Error::QuestionNotFound => write!(f, "Question Not Found"),
             }
         }
+    }
 
     impl Reject for Error {}
-        
+
+    pub async fn return_error(r: Rejection) -> Result<impl Reply, Rejection> {
+        if let Some(error) = r.find::<Error>() {
+            Ok(warp::reply::with_status(
+                error.to_string(),
+                StatusCode::RANGE_NOT_SATISFIABLE,
+            ))
+        } else if let Some(error) = r.find::<CorsForbidden>() {
+            Ok(warp::reply::with_status(
+                error.to_string(),
+                StatusCode::FORBIDDEN,
+            ))
+        } else if let Some(error) = r.find::<BodyDeserializeError>() {
+            Ok(warp::reply::with_status(
+                error.to_string(),
+                StatusCode::UNPROCESSABLE_ENTITY,
+            ))
+        } else {
+            Ok(warp::reply::with_status(
+                "Route not found".to_string(),
+                StatusCode::NOT_FOUND,
+            ))
+        }
     }
 }
 
@@ -171,32 +204,6 @@ async fn add_answer(
     store.answers.write().await.insert(answer.id.clone(), answer);
 
     Ok(warp::reply::with_status("Answer added", StatusCode::OK))
-}
-
-impl Reject for Error {}
-
-async fn return_error(r: Rejection) -> Result<impl Reply, Rejection> {
-    if let Some(error) = r.find::<Error>() {
-        Ok(warp::reply::with_status(
-                error.to_string(),
-                StatusCode::RANGE_NOT_SATISFIABLE,
-            ))
-    } else if let Some(error) = r.find::<CorsForbidden>() {
-        Ok(warp::reply::with_status(
-            error.to_string(),
-            StatusCode::FORBIDDEN,
-        ))
-    } else if let Some(error) = r.find::<Body.DeserializeError>() {
-        Ok(warp::reply::with_status(
-            error.to_string(),
-            StatusCode::UNPROCESSABLE_ENTITY,
-        ))        
-    }  else {
-        Ok(warp::reply::with_status(
-            "Route not found".to_string(),
-            StatusCode::NOT_FOUND,
-        ))
-    }
 }
 
 async fn get_questions(
