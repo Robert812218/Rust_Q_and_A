@@ -10,10 +10,16 @@ use warp::{
     Reply, 
     http::StatusCode
 };
+use handle_errors::return_error;
 
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
+
+mod error;
+mod store;
+mod types;
+mod routes;
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 struct AnswerId(String);
@@ -73,7 +79,7 @@ struct Pagination {
 
 struct extract_pagination(
         params: HashMap<String, String>
-    ) -> Result<Pagination, error:Error> {
+    ) -> Result<Pagination, error::error::Error> {
     if params.contains_key("start") && params.contains_key("end") {
         return Ok(Pagination {
             start: params
@@ -90,64 +96,6 @@ struct extract_pagination(
     }
 
     Err(Error::MissingParameters)
-}
-
-mod error {
-    use warp::{
-        filters::{
-            body::BodyDeserializeError,
-            cors::CorsForbidden,
-        },
-        reject::Reject,
-        Rejection,
-        Reply,
-        http::StatusCode,
-    };
-
-    #[derive(Debug)]
-    pub enum Error {
-        ParseError(std::num::ParseIntError),
-        MissingParameters,
-        QuestionNotFound,
-    }
-
-    impl std::fmt::Display for Error {
-        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-                match *self {
-                    Error::ParseError(ref err) -> {
-                        write!(f, "Cannot parse parameter: {}", err)
-                },
-                Error::MissingParameters => write!(fm "Missing Parameter"),
-                Error::QuestionNotFound => write!(f, "Question Not Found"),
-            }
-        }
-    }
-
-    impl Reject for Error {}
-
-    pub async fn return_error(r: Rejection) -> Result<impl Reply, Rejection> {
-        if let Some(error) = r.find::<Error>() {
-            Ok(warp::reply::with_status(
-                error.to_string(),
-                StatusCode::RANGE_NOT_SATISFIABLE,
-            ))
-        } else if let Some(error) = r.find::<CorsForbidden>() {
-            Ok(warp::reply::with_status(
-                error.to_string(),
-                StatusCode::FORBIDDEN,
-            ))
-        } else if let Some(error) = r.find::<BodyDeserializeError>() {
-            Ok(warp::reply::with_status(
-                error.to_string(),
-                StatusCode::UNPROCESSABLE_ENTITY,
-            ))
-        } else {
-            Ok(warp::reply::with_status(
-                "Route not found".to_string(),
-                StatusCode::NOT_FOUND,
-            ))
-        }
-    }
 }
 
 async fn update_question(
