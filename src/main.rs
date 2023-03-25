@@ -10,12 +10,13 @@ mod types;
 
 #[tokio::main]
 async fn main() {
-    let log_filter = std::env::var("RUST_LOG")
-        .unwrap_or_else(
-            "web_q_and_a=info,wrap=error".to_owned()    
-        );
+    let log_filter = std::env::var("RUST_LOG").unwrap_or_else(|_| {
+        "handle_errors=warn,practical_rust_book=warn,warp=warn".to_owned()
+    });
 
-    let store = store::Store::new();
+    // if you need to add a username and password, the connection ould look like:
+    // "postgres:/ /username:password@localhost:5432/rustwebdev"
+    let store = store::Store::new("postgres:/ /localhost:5432/rustwebdev").await;
     let store_filter = warp::any().map(move || store.clone());
 
     tracing_subscriber::fmt()
