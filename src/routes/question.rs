@@ -9,22 +9,24 @@ use crate::types::question::{NewQuestion, Question};
 
 #[instrument]
 pub async fn get_questions(
-    &self,
-    limit: Option<i32>,
-    offset: i32,
+    params: HashMap<String, String>,
+    store: Store,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    match sqlx::query("SELECT * from questions LIMIT $1 OFFSET $2")
-        .bind(limit)
-        .bind(offset)
-        .map(|row: PgRow| {
-            id: QuestionId(row.get("id")),
-            title: row.get("tags"),
-            })
-        .fetch_all(&self.connection)
-        .await {
-            Ok(questions) => Ok(questions),
-            Err(e) => Err(e),
-        }
+    event!(target: "practical_rust_book", Level::INFO, "querying questions");
+    let mut pagination = Pagination::default();
+
+    if !params.is_empty() {
+        event!(Level::INFO, pagination = true);
+        pagination = extract_pagination(params)?;
+    }
+
+    match store
+        .get_questions(pagination.limit, pagination.offset)
+        .await
+    {
+        Ok(res) => Ok(warp::reply::json(&res)),
+        Err(e) => Err(warp::reject::custom(e)),
+    }
 }
 
 pub async fn update_question(
